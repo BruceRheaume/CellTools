@@ -86,7 +86,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
   }
   optimize_k <- optimize_k[-nrow(optimize_k),]
   opti_k <- min(optimize_k$k[which(optimize_k$correct == max(optimize_k$correct))]) #18
-  p1 <- ggplot(optimize_k) + geom_line(aes(x = k, y = correct)) + geom_vline(xintercept = opti_k, col = "red")
+  p1 <- ggplot2::ggplot(optimize_k) + geom_line(aes(x = k, y = correct)) + geom_vline(xintercept = opti_k, col = "red")
   print(p1)
 }
 
