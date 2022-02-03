@@ -1,6 +1,6 @@
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
-#' Optimized Reciprocal Mappping of Query and Reference Data
+#' Optimized Tracing  of Query to Reference Data
 #'
 #' This function takes query and reference Seurat objects as input, identifies the optimal k-weight-parameter, 
 #' and outputs the query object with updated metadata and miscellaneous slots, based on arguments; see below.
@@ -22,7 +22,7 @@
 MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), sample = F, dims = 30){
   map.to <- function(ref = ref, query = query, label = lab, k = 30){
     n = 200  
-    dat <- TransferData(
+    dat <- Seurat::TransferData(
       anchorset = anchors,
       reference = ref,
       query = query,
@@ -30,7 +30,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
       k.weight = k,
       weight.reduction = "pcaproject"
     )
-    dat <- IntegrateEmbeddings(
+    dat <- Seurat::IntegrateEmbeddings(
       anchorset = anchors,
       reference = ref,
       query = dat, 
@@ -38,7 +38,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
       reductions = "pcaproject",
       k.weight = k
     )
-    dat <- ProjectUMAP(
+    dat <- Seurat::ProjectUMAP(
       query = dat, 
       query.reduction = "ref.pca", 
       reference = ref, 
