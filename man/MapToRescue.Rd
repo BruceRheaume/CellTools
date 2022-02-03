@@ -2,7 +2,7 @@
 % Please edit documentation in R/MapToRescue.R
 \name{MapToRescue}
 \alias{MapToRescue}
-\title{Optimized Reciprocal Mappping of Query and Reference Data}
+\title{Optimized Tracing  of Query to Reference Data}
 \usage{
 MapToRescue(
   ref,
