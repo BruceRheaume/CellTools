@@ -76,7 +76,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
     normalization.method = "LogNormalize",
     reference.reduction = "pca",
     reduction = "pcaproject",
-    dims = 1:dims
+    dims = 1:dims, k.filter = NA
   )
   optimize_k <- data.frame(k = 0, correct = 0)
   for(k in range[1]:range[2]){ 
@@ -86,7 +86,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
   }
   optimize_k <- optimize_k[-nrow(optimize_k),]
   opti_k <- min(optimize_k$k[which(optimize_k$correct == max(optimize_k$correct))]) #18
-  p1 <- ggplot2::ggplot(optimize_k) + geom_line(aes(x = k, y = correct)) + geom_vline(xintercept = opti_k, col = "red")
+  #p1 <- ggplot2::ggplot(optimize_k) + geom_line(aes(x = k, y = correct)) + geom_vline(xintercept = opti_k, col = "red")
   write.csv(optimize_k, "optimize_k.csv")
 }
 
