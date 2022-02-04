@@ -67,6 +67,5 @@ map_to <- function(ref, query, lab, method = "Rescue", range = c(10,100), sample
   features <- Seurat::SelectIntegrationFeatures(object.list = ref.list, nfeatures = 2000)
   ref.list <- lapply(ref.list, Seurat::RunPCA)
   ref.list[[1]] <- Seurat::RunUMAP(ref.list[[1]], dims = 1:dims, return.model = T) 
-  print("some fries motha fucker")
   return(ref.list)
 }
