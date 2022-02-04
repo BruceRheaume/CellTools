@@ -2,16 +2,16 @@
 % Please edit documentation in R/map_to.R
 \name{map_to}
 \alias{map_to}
-\title{Optimized Reciprocal Mappping of Query and Reference Data}
+\title{Optimized Tracing  of Query to Reference Data}
 \usage{
 map_to(
   ref,
   query,
   lab,
-  method = "ref-sample",
-  range = c(5, 100),
+  method = "Rescue",
+  range = c(10, 100),
   sample = F,
-  dims = 50
+  dims = 30
 )
 }
 \arguments{
@@ -21,21 +21,20 @@ map_to(
 
 \item{lab}{The reference @meta.data slot to transfer to query object}
 
-\item{method}{The method to use for k-weight optimization. Options include: "ref-sample" (default) or "id.score"}
+\item{method}{Whether or not to do the reintegration. If method = "one-step," only the k-parameter optimization and standard mapping will be performed (MapTo). If method = "rescue," the confidence-score optimization and reintegration will also be performed; this step greatly increases the accuracy of predicted cell IDs (MapToRescue); default is "rescue."}
 
-\item{range}{The range of k-weight parameters to loop through; default: 5-100}
+\item{range}{The range of k-weight parameters to loop through; default: 10-100}
 
-\item{sample}{If method = "id.score," the reference and query data will be downsampled to the sample size given by this parameter. If method = "ref-sample," the sample number will be the size of the "query" object split from the reference.}
+\item{sample}{If a number is given, the reference and query data will be downsampled to the sample size given by this parameter. This will vastly increase the speed of the algorithm, but it will decrease the accuracy. Default is FALSE.}
 
-\item{dims}{Number of PCs to use when creating the reference UMAP and when discovering anchors.}
+\item{dims}{The number of PCs to use when creating the reference UMAP and when discovering anchors.}
 }
 \value{
 A Seurat object containing the transferred data labels stored in "predicted.ids," the
 confidence scores saved in predicted.id.score, and the reference umap of the query object.
 }
 \description{
-This function takes query and reference Seurat objects as input, identifies the optimal k-weight-parameter,
-and outputs the query object with updated metadata and miscellaneous slots, based on arguments; see below.
+Stupid Problem Solver
 }
 \references{
 Rheaume, B. A., & Trakhtenberg, E. F. (2021). Self-learning optimization algorithm for integration
