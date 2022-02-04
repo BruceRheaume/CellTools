@@ -67,7 +67,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
   ref.list <- Seurat::SplitObject(ref, split.by = "split")
   features <- Seurat::SelectIntegrationFeatures(object.list = ref.list, nfeatures = 2000)
   ref.list <- lapply(ref.list, Seurat::RunPCA)
-  ref.list[[1]] <- Seurat::RunUMAP(ref.list[[1]], dims = 1:50, return.model = T) 
+  ref.list[[1]] <- Seurat::RunUMAP(ref.list[[1]], dims = 1:dims, return.model = T) 
 
   anchors <- Seurat::FindTransferAnchors(
     reference = ref.list[[1]],
@@ -76,7 +76,7 @@ MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), s
     normalization.method = "LogNormalize",
     reference.reduction = "pca",
     reduction = "pcaproject",
-    dims = 1:dims, k.filter = NA
+    dims = 1:dims
   )
   optimize_k <- data.frame(k = 0, correct = 0)
   for(k in range[1]:range[2]){ 
