@@ -2,13 +2,13 @@
 % Please edit documentation in R/MapToRescue.R
 \name{MapToRescue}
 \alias{MapToRescue}
-\title{Optimized Tracing  of Query to Reference Data}
+\title{Optimized Tracing of Query to Reference Data}
 \usage{
 MapToRescue(
   ref,
   query,
   lab,
-  method = "Rescue",
+  method = "rescue",
   range = c(10, 100),
   sample = F,
   dims = 30

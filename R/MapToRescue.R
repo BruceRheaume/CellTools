@@ -1,6 +1,6 @@
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
-#' Optimized Tracing  of Query to Reference Data
+#' Optimized Tracing of Query to Reference Data
 #'
 #' This function takes query and reference Seurat objects as input, identifies the optimal k-weight-parameter, 
 #' and outputs the query object with updated metadata and miscellaneous slots, based on arguments; see below.
@@ -19,7 +19,7 @@
 #' of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types. 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 #' @export
-MapToRescue <- function(ref, query, lab, method = "Rescue", range = c(10,100), sample = F, dims = 30){
+MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), sample = F, dims = 30){
   map.to <- function(ref = ref, query = query, label = lab, k = 30){
     n = 200  
     dat <- Seurat::TransferData(
