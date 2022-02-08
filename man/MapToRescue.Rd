@@ -10,8 +10,10 @@ MapToRescue(
   lab,
   method = "rescue",
   range = c(10, 100),
-  sample = F,
-  dims = 30
+  ref.dims = 30,
+  query.dims = 30,
+  existing.model = F,
+  sample = F
 )
 }
 \arguments{
@@ -25,9 +27,11 @@ MapToRescue(
 
 \item{range}{The range of k-weight parameters to loop through; default: 10-100}
 
-\item{sample}{If a number is given, the reference and query data will be downsampled to the sample size given by this parameter. This will vastly increase the speed of the algorithm, but it will decrease the accuracy. Default is FALSE.}
+\item{ref.dims}{The number of PCs to use when creating the reference UMAP and discovering anchors.}
 
-\item{dims}{The number of PCs to use when creating the reference UMAP and when discovering anchors.}
+\item{query.dims}{The number of PCs to use when creating the query UMAP}
+
+\item{sample}{If a number is given, the reference and query data will be downsampled to the sample size given by this parameter. This will vastly increase the speed of the algorithm, but it will decrease the accuracy. Default is FALSE.}
 }
 \value{
 A Seurat object containing the transferred data labels stored in "predicted.ids," the

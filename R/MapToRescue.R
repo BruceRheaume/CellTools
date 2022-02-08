@@ -11,7 +11,8 @@
 #' @param method Whether or not to do the reintegration. If method = "one-step," only the k-parameter optimization and standard mapping will be performed (MapTo). If method = "rescue," the confidence-score optimization and reintegration will also be performed; this step greatly increases the accuracy of predicted cell IDs (MapToRescue); default is "rescue."
 #' @param range The range of k-weight parameters to loop through; default: 10-100
 #' @param sample If a number is given, the reference and query data will be downsampled to the sample size given by this parameter. This will vastly increase the speed of the algorithm, but it will decrease the accuracy. Default is FALSE.
-#' @param dims The number of PCs to use when creating the reference UMAP and when discovering anchors.
+#' @param ref.dims The number of PCs to use when creating the reference UMAP and discovering anchors.
+#' @param query.dims The number of PCs to use when creating the query UMAP 
 #' @return A Seurat object containing the transferred data labels stored in "predicted.ids," the 
 #' confidence scores saved in predicted.id.score, and the reference umap of the query object.
 #' @references  
@@ -19,7 +20,7 @@
 #' of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types. 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 #' @export
-MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), sample = F, dims = 30){
+MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), ref.dims = 30, query.dims = 30, existing.model = F, sample = F){
   map.to <- function(ref = ref, query = query, label = lab, k = 30){
     n = 200  
     dat <- Seurat::TransferData(
@@ -65,11 +66,11 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), s
     set.seed(1984)
     sampled.cells <- sample(x = colnames(query), size = round((sample/ncol(ref))*ncol(query)), replace = F) # query should be smaller than  reference
     query <- subset(x = query, cells = sampled.cells)
-    
+
     set.seed(1984)
     sampled.cells <- sample(x = colnames(ref), size = sample, replace = F)
     ref <- subset(x = ref, cells = sampled.cells)
-  } 
+  }
   
   # First split the reference to test query and test reference
   ref$split <- 1
@@ -78,8 +79,9 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), s
   ref.list <- Seurat::SplitObject(ref, split.by = "split")
   features <- Seurat::SelectIntegrationFeatures(object.list = ref.list, nfeatures = 2000)
   ref.list <- lapply(ref.list, Seurat::RunPCA)
-  ref.list[[1]] <- Seurat::RunUMAP(ref.list[[1]], dims = 1:dims, return.model = T) 
-
+  if(existing.model == F){
+    ref.list[[1]] <- Seurat::RunUMAP(ref.list[[1]], dims = 1:ref.dims, return.model = T) 
+  }
   anchors <- Seurat::FindTransferAnchors(
     reference = ref.list[[1]],
     query = ref.list[[2]],
@@ -87,7 +89,7 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), s
     normalization.method = "LogNormalize",
     reference.reduction = "pca",
     reduction = "pcaproject",
-    dims = 1:dims
+    dims = 1:ref.dims
   )
   optimize_k <- data.frame(k = 0, correct = 0)
   pb <- txtProgressBar(min = range[1],      # Minimum value of the progress bar
@@ -102,13 +104,15 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), s
     setTxtProgressBar(pb, k)
   }
   close(pb)
-  optimize_k <- optimize_k[-nrow(optimize_k),]
-  opti_k <- min(optimize_k$k[which(optimize_k$correct == max(optimize_k$correct))]) #18
-  optimized_k <<- ggplot2::ggplot(optimize_k) + ggplot2::geom_line(aes(x = k, y = correct)) + ggplot2::geom_vline(xintercept = opti_k, col = "red")
-  print(optimized_k)
+  optimize_k <<- optimize_k[-nrow(optimize_k),]
+  opti_k <<- min(optimize_k$k[which(optimize_k$correct == max(optimize_k$correct))]) #18
+  #optimized_k <<- ggplot2::ggplot(optimize_k) + ggplot2::geom_line(aes(x = k, y = correct)) + ggplot2::geom_vline(xintercept = opti_k, col = "red")
+  #print(optimized_k)
   #write.csv(optimize_k, "optimize_k.csv")
 
 #### above works ####
+  #ref <- Seurat::RunUMAP(ref, dims = 1:ref.dims, return.model = T) 
+  features <- Seurat::SelectIntegrationFeatures(object.list = list(ref,query), nfeatures = 2000)
   anchors <- Seurat::FindTransferAnchors(
     reference = ref,
     query = query,
@@ -116,20 +120,28 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), s
     normalization.method = "LogNormalize",
     reference.reduction = "pca",
     reduction = "pcaproject",
-    dims = 1:dims
+    dims = 1:ref.dims
   )
 query <- map.to(ref = ref, query = query, label = ref[[lab]][,1], k = opti_k)
+query$mapto <- query$predicted.id
 
+if(ncol(query) < 500){
+  return(query)
+  } else{
+
+#### Rescue ####
 # set to optimal 
 prop <- ncol(query)/ncol(ref)
-num <- round(prop*ncol(query))
+if(prop > 0.05){
+  num <- round(prop*ncol(query))
+} else {num <- round(ncol(query)/4)}
 
 Seurat::DefaultAssay(query) <- "RNA"
 all.genes <- rownames(query@assays$RNA@data)
 query <- Seurat::ScaleData(query, features = all.genes)
 query <- Seurat::FindVariableFeatures(query)
 query <- Seurat::RunPCA(query)
-query <- Seurat::FindNeighbors(query, dims = 1:dims)
+query <- Seurat::FindNeighbors(query, dims = 1:query.dims)
 query <- Seurat::FindClusters(query, resolution = 0.5)
 
 query$split <- 1
@@ -139,7 +151,7 @@ query$split[sample(1:ncol(query), num, replace = F)] <- 2
 query.list <- Seurat::SplitObject(query, split.by = "split")
 features <- Seurat::SelectIntegrationFeatures(object.list = query.list, nfeatures = 2000)
 query.list <- lapply(query.list, Seurat::RunPCA)
-query.list[[1]] <- Seurat::RunUMAP(query.list[[1]], dims = 1:dims, return.model = T) 
+query.list[[1]] <- Seurat::RunUMAP(query.list[[1]], dims = 1:query.dims, return.model = T) 
 
 anchors <- Seurat::FindTransferAnchors(
   reference = query.list[[1]],
@@ -148,20 +160,20 @@ anchors <- Seurat::FindTransferAnchors(
   normalization.method = "LogNormalize",
   reference.reduction = "pca",
   reduction = "pcaproject",
-  dims = 1:dims
+  dims = 1:query.dims
 )
 query.list[[2]] <- map.to(ref = query.list[[1]], query = query.list[[2]], label = query.list[[1]]$seurat_clusters, k = opti_k) 
 length(which(query.list[[2]]$predicted.id != query.list[[2]]$seurat_clusters))
 
 # Make a cutoff predicted id score for maximal incorrect capture
-predicted.bad.df <- data.frame(score = query.list[[2]]$predicted.id.score, 
+predicted.bad.df <<- data.frame(score = query.list[[2]]$predicted.id.score, 
                                correct = rep("correct", ncol(query.list[[2]])))
 predicted.bad.df$correct[which(query.list[[2]]$predicted.id != query.list[[2]]$seurat_clusters)] <- "incorrect"
 predicted.bad.df$correct <- as.factor(predicted.bad.df$correct)
 
-good_bad_viols <<- ggplot2::ggplot(predicted.bad.df) + ggplot2::geom_violin(aes(x = correct, y = score, fill = correct), scale = "width") +
-  ggplot2::scale_fill_manual(values = c("green", "red")) 
-print(good_bad_viols)
+#good_bad_viols <<- ggplot2::ggplot(predicted.bad.df) + ggplot2::geom_violin(aes(x = correct, y = score, fill = correct), scale = "width") +
+#  ggplot2::scale_fill_manual(values = c("green", "red")) 
+#print(good_bad_viols)
 # make.fig(p1, "injured_correct_incorrect_predicted.ids", 5,5)
 
 
@@ -172,12 +184,12 @@ correct.density <- density(subset(predicted.bad.df, correct == "correct")$score,
 not.correct.density <- density(subset(predicted.bad.df, correct == "incorrect")$score, from = lower.limit, to = upper.limit, n = 2^10)
 
 density.difference <- correct.density$y - not.correct.density$y
-intersection.point <- min(correct.density$x[which(diff(density.difference > 0) != 0) + 1])
+intersection.point <<- min(correct.density$x[which(diff(density.difference > 0) != 0) + 1])
 
-good_bad_density <<- ggplot2::ggplot(predicted.bad.df, aes(x = score, fill = correct)) + ggplot2::geom_density(alpha = 0.7) +
-  ggplot2::scale_fill_manual(values = c("green", "red")) + theme_classic() + 
-  ggplot2::geom_vline(xintercept = intersection.point, color = "red")
-print(good_bad_density)
+# good_bad_density <<- ggplot2::ggplot(predicted.bad.df, aes(x = score, fill = correct)) + ggplot2::geom_density(alpha = 0.7) +
+#   ggplot2::scale_fill_manual(values = c("green", "red")) + theme_classic() + 
+#   ggplot2::geom_vline(xintercept = intersection.point, color = "red")
+# print(good_bad_density)
 #make.fig(p1, "correct_incorrect_densities_intersect", 5,5)
 
 #length(which(query$predicted.id.score < intersection.point))
@@ -194,8 +206,8 @@ anchors.bad <-  Seurat::FindIntegrationAnchors(object.list = list(ref, query.bad
 # this command creates an 'integrated' data assayy  
 query.combined <- Seurat::IntegrateData(anchorset = anchors.bad)
 query.combined <- Seurat::ScaleData(query.combined, verbose = FALSE)
-query.combined <- Seurat::RunPCA(query.combined, npcs = dims, verbose = FALSE)
-query.combined <- Seurat::RunUMAP(query.combined, reduction = "pca", dims = 1:dims)
+query.combined <- Seurat::RunPCA(query.combined, npcs = query.dims, verbose = FALSE)
+query.combined <- Seurat::RunUMAP(query.combined, reduction = "pca", dims = 1:query.dims)
 
 new.embed <- as.data.frame(query.combined@reductions$umap@cell.embeddings)
 new.embed$shape <- "reference"
@@ -205,16 +217,16 @@ new.embed[bad.cells,]$type <- query.bad$predicted.id
 
 #new.embed$cluster <- query.combined$seurat_clusters
 new.embed$shape <- factor(new.embed$shape, levels = c("reference", "incorrect"))
-
+new.embed <<- new.embed
 
 # p1 <- ggplot(new.embed) + geom_point(aes(x = UMAP_1, y = UMAP_2, col = type, shape = shape, size = shape)) +
 #   scale_shape_manual(values = c(16,4)) + scale_size_manual(values = c(.5,2)) + theme_classic()
 # p1
 # make.fig(p1, "new_integration_bad_predict_ref_onc", 5,6)
 
-new_integration <<- ggplot2::ggplot(new.embed) + ggplot2::geom_point(aes(x = UMAP_1, y = UMAP_2, col = type, shape = shape, size = shape)) +
-  ggplot2::scale_shape_manual(values = c(16,4)) + scale_size_manual(values = c(.5,2)) + theme_classic()
-print(new_integration)
+# new_integration <<- ggplot2::ggplot(new.embed) + ggplot2::geom_point(aes(x = UMAP_1, y = UMAP_2, col = type, shape = shape, size = shape)) +
+#   ggplot2::scale_shape_manual(values = c(16,4)) + scale_size_manual(values = c(.5,2)) + theme_classic()
+# print(new_integration)
 
 # Extract positions
 
@@ -227,7 +239,7 @@ bad.umap <- query.combined@reductions$umap@cell.embeddings[bad.cells,]
 bad.seu <- query.combined$predicted.id[which(colnames(query.combined) %in% bad.cells)]
 
 print(nrow(bad.umap))
-print(system.time({ apply(bad.umap[c(1:100),], 1, dist) })) # should take ~30 min
+#print(system.time({ apply(bad.umap[c(1:100),], 1, dist) })) # should take ~30 min
 
 new <- apply(bad.umap, 1, dist)
 
@@ -238,10 +250,11 @@ print(length(which(new == bad.seu))/length(bad.seu)) # 33% remained the same clu
 #                          MapToRescue = a, 
 #                          Type = query$type[bad.cells])
 
-query$mapto.predicted <- query$predicted.id
 query$predicted.id[bad.cells] <- new
+query$maptorescue <- quer$predicted.id
 
 return(query)
+}
 }
 
 # # Get the percentage of unassigned were "remapped"

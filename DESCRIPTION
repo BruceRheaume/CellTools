@@ -13,4 +13,4 @@ RoxygenNote: 7.1.2
 Imports:
 	data.table (>= 1.9.4),
 	Seurat (== 4.0.5),
-	ggplot2
+	ggplot2 (>= 3.3.5)
