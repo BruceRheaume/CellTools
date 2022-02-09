@@ -20,7 +20,7 @@
 #' of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types. 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 #' @export
-MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), ref.dims = 30, query.dims = 30, existing.model = F, sample = F){
+MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), ref.dims = 30, query.dims = 30, existing.model = F){
   map.to <- function(ref = ref, query = query, label = lab, k = 30){
     n = 200  
     dat <- Seurat::TransferData(
@@ -49,8 +49,7 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), r
       reduction.model = "umap",
       #k.weight = k,
       n.trees = n,
-      verbose = F,
-      assay = "RNA"
+      verbose = F
     )
     return(dat)
   }
@@ -59,18 +58,20 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), r
     a <- as.numeric(apply(xy2, 1, function(x){
       return(sqrt(((abs(x[1]-as.numeric(xy1)[1]))^2) + ((abs(x[2]-as.numeric(xy1)[2]))^2)))
     }))
-    return(ref.seu[which(a == min(a))])
+    return(data.frame(Ref_cell = rownames(ref.umap)[which(a == min(a))],
+                      Cluster = ref.seu[which(a == min(a))],
+                      Dist = min(a)))
   }
   
-  if(sample != F){
-    set.seed(1984)
-    sampled.cells <- sample(x = colnames(query), size = round((sample/ncol(ref))*ncol(query)), replace = F) # query should be smaller than  reference
-    query <- subset(x = query, cells = sampled.cells)
-
-    set.seed(1984)
-    sampled.cells <- sample(x = colnames(ref), size = sample, replace = F)
-    ref <- subset(x = ref, cells = sampled.cells)
-  }
+  # if(sample != F){
+  #   set.seed(1984)
+  #   sampled.cells <- sample(x = colnames(query), size = round((sample/ncol(ref))*ncol(query)), replace = F) # query should be smaller than  reference
+  #   query <- SeuratObject::subset(x = query, cells = sampled.cells)
+  # 
+  #   set.seed(1984)
+  #   sampled.cells <- sample(x = colnames(ref), size = sample, replace = F)
+  #   ref <- subset(x = ref, cells = sampled.cells)
+  # }
   
   # First split the reference to test query and test reference
   ref$split <- 1
@@ -111,7 +112,10 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), r
   #write.csv(optimize_k, "optimize_k.csv")
 
 #### above works ####
-  #ref <- Seurat::RunUMAP(ref, dims = 1:ref.dims, return.model = T) 
+  if(existing.model == F){
+    ref <- Seurat::RunUMAP(ref, dims = 1:ref.dims, return.model = T)
+  }
+  #ref.list <- lapply(list(ref,query), Seurat::RunPCA)
   features <- Seurat::SelectIntegrationFeatures(object.list = list(ref,query), nfeatures = 2000)
   anchors <- Seurat::FindTransferAnchors(
     reference = ref,
@@ -123,7 +127,7 @@ MapToRescue <- function(ref, query, lab, method = "rescue", range = c(10,100), r
     dims = 1:ref.dims
   )
 query <- map.to(ref = ref, query = query, label = ref[[lab]][,1], k = opti_k)
-query$mapto <- query$predicted.id
+query$maptorescue <- query$predicted.id
 
 if(ncol(query) < 500){
   return(query)
@@ -187,7 +191,7 @@ density.difference <- correct.density$y - not.correct.density$y
 intersection.point <<- min(correct.density$x[which(diff(density.difference > 0) != 0) + 1])
 
 # good_bad_density <<- ggplot2::ggplot(predicted.bad.df, aes(x = score, fill = correct)) + ggplot2::geom_density(alpha = 0.7) +
-#   ggplot2::scale_fill_manual(values = c("green", "red")) + theme_classic() + 
+#   ggplot2::scale_fill_manual(values = c("green", "red")) + theme_classic() +
 #   ggplot2::geom_vline(xintercept = intersection.point, color = "red")
 # print(good_bad_density)
 #make.fig(p1, "correct_incorrect_densities_intersect", 5,5)
@@ -241,16 +245,39 @@ bad.seu <- query.combined$predicted.id[which(colnames(query.combined) %in% bad.c
 print(nrow(bad.umap))
 #print(system.time({ apply(bad.umap[c(1:100),], 1, dist) })) # should take ~30 min
 
-new <- apply(bad.umap, 1, dist)
 
-print(length(which(new == bad.seu))/length(bad.seu)) # 33% remained the same cluster designation
-# new.percent <- 1-((length(bad.seu)-length(which(a == bad.seu)))/ncol(query.list[[2]]))
+##########
+new <- apply(bad.umap, 1, dist) # 30 min
+new.df <- do.call(rbind, new)
+new.df$Query_cell <- rownames(new.df)
+new.df <- new.df[,c(1,4,2,3)]
+set.seed(1984)
+new.df$Rand_x <- sample(c(-1,1), nrow(new.df), replace = T)
+set.seed(5)
+new.df$Rand_y <- sample(c(-1,1), nrow(new.df), replace = T)
 
-# new.old.df <- data.frame(MapTo = query$predicted.id[bad.cells],
-#                          MapToRescue = a, 
-#                          Type = query$type[bad.cells])
+new.df$Rand_x_dist <- sapply(new.df$Dist, function(x){
+  runif(1, min=0, max=x)
+})
 
-query$predicted.id[bad.cells] <- new
+new.df$Y_comp <- mapply(function(dist, rand_x) {
+  sqrt((dist^2)-(rand_x^2))
+}, dist = new.df$Dist, rand_x = new.df$Rand_x_dist)
+
+# Scale
+combined.range.x <- range(query.combined@reductions$umap@cell.embeddings[,1])[2] - range(query.combined@reductions$umap@cell.embeddings[,1])[1]
+ref.range.x <- range(ref@reductions$umap@cell.embeddings[,1])[2] - range(ref@reductions$umap@cell.embeddings[,1])[1]
+x.scale <- ref.range.x/combined.range.x
+
+combined.range.y <- range(query.combined@reductions$umap@cell.embeddings[,2])[2] - range(query.combined@reductions$umap@cell.embeddings[,2])[1]
+ref.range.y <- range(ref@reductions$umap@cell.embeddings[,2])[2] - range(ref@reductions$umap@cell.embeddings[,2])[1]
+y.scale <- ref.range.y/combined.range.y
+
+new.df$Rand_x_dist <- new.df$Rand_x_dist*x.scale*new.df$Rand_x
+new.df$Y_comp <- new.df$Y_comp*y.scale*new.df$Rand_y
+new.df <<- new.df
+
+query$predicted.id[bad.cells] <- new.df$Cluster
 query$maptorescue <- quer$predicted.id
 
 return(query)

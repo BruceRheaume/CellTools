@@ -12,8 +12,7 @@ MapToRescue(
   range = c(10, 100),
   ref.dims = 30,
   query.dims = 30,
-  existing.model = F,
-  sample = F
+  existing.model = F
 )
 }
 \arguments{
