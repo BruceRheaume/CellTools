@@ -28,7 +28,8 @@
 #' Rheaume, B. A., & Trakhtenberg, E. F. (2021). Self-learning optimization algorithm for integration 
 #' of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types. 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
-#' @export
+#' @importFrom ggplot2 ggplot aes geom_point geom_line theme_classic
+#' @export 
 EuclidAssign <- function(query, ref, label){
   dist <- function(xy1,xy2 = ref,lab = label){
     a <- as.numeric(apply(xy2[,c(1,2)], 1, function(x){
@@ -41,9 +42,9 @@ EuclidAssign <- function(query, ref, label){
   dat <- do.call(rbind,apply(query, 1, dist))
   lines <- rbind(ref[as.numeric(dat$Ref_cell),], query)
   lines$group <- rep(seq(1:nrow(query)), 2)
-  print(ggplot2::ggplot(test.ref) + ggplot2::geom_point(aes(x = UMAP_1, y = UMAP_2, col = label)) + ggplot2::theme_classic() +
-    ggplot2::geom_point(data = test.query, aes(x = UMAP_1, y = UMAP_2)) +
-    ggplot2::geom_line(data = lines, aes(x = UMAP_1, y = UMAP_2, group = group, col = rep(dat$Label, 2)), linetype = "dashed"))
+  print(ggplot(test.ref) + geom_point(aes(x = UMAP_1, y = UMAP_2, col = label)) + theme_classic() +
+    geom_point(data = test.query, aes(x = UMAP_1, y = UMAP_2)) +
+    geom_line(data = lines, aes(x = UMAP_1, y = UMAP_2, group = group, col = rep(dat$Label, 2)), linetype = "dashed"))
   return(dat)
 }
 
