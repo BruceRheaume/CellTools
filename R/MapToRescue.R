@@ -277,8 +277,9 @@ new.df$Rand_x_dist <- new.df$Rand_x_dist*x.scale*new.df$Rand_x
 new.df$Y_comp <- new.df$Y_comp*y.scale*new.df$Rand_y
 new.df <<- new.df
 
+query$predicted.before <- query$predicted.id
 query$predicted.id[bad.cells] <- new.df$Cluster
-query$maptorescue <- quer$predicted.id
+#query$maptorescue <- query$predicted.id
 
 return(query)
 }
