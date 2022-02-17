@@ -16,8 +16,8 @@
 #' of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types. 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 #' @export
-MapTo <- function(ref, query, lab, range = c(10,100), ref.dims = 30, query.dims = 30){
-  query@misc$CellTools <- list() 
+RefOptiK <- function(ref, query, lab, range = c(10,100), ref.dims = 30, query.dims = 30){
+  ref@misc$CellTools <- list() 
   # MapTo:
   map.to <- function(ref = ref, query = query, label = lab, k = 30){
     n = 200  
@@ -72,10 +72,10 @@ MapTo <- function(ref, query, lab, range = c(10,100), ref.dims = 30, query.dims 
     dims = 1:ref.dims
   )
   optimize_k <- data.frame(k = 0, correct = 0)
-  pb <- txtProgressBar(min = range[1],      # Minimum value of the progress bar
-                       max = range[2], # Maximum value of the progress bar
-                       style = 3,    # Progress bar style (also available style = 1 and style = 2)
-                       width = 50,   # Progress bar width. Defaults to getOption("width")
+  pb <- txtProgressBar(min = range[1],     
+                       max = range[2], 
+                       style = 3,    
+                       width = 100,   
                        char = "=")
   for(k in range[1]:range[2]){ 
     ref.list[[2]] <- map.to(ref = ref.list[[1]], query = ref.list[[2]], label = ref.list[[1]][[lab]][,1], k = k)
@@ -85,16 +85,21 @@ MapTo <- function(ref, query, lab, range = c(10,100), ref.dims = 30, query.dims 
   }
   close(pb)
   optimize_k <- optimize_k[-nrow(optimize_k),]
-  opti_k <<- min(optimize_k$k[which(optimize_k$correct == max(optimize_k$correct))]) #18
+  opti_k <- min(optimize_k$k[which(optimize_k$correct == max(optimize_k$correct))]) #18
   optimized_k <- ggplot2::ggplot(optimize_k) + ggplot2::geom_line(ggplot2::aes(x = k, y = correct)) + ggplot2::geom_vline(xintercept = opti_k, col = "red")
   print(optimized_k)
   
-  # Save the data in Seurat object slot
-  query@misc$CellTools$opti_k <- opti_k
-  query@misc$CellTools$optimize_k <- optimize_k
-  query@misc$CellTools$optimized_k <- optimized_k
-  
   ref.list[[2]] <- map.to(ref = ref.list[[1]], query = ref.list[[2]], label = ref.list[[1]][[lab]][,1], k = opti_k)
+
+  # Save the data in Seurat object slot
+  ref$mapto.predicted <- 0
+  ref$mapto.predicted[which(ref$split == 2)] <- ref.list[[2]]$predicted.id
+  ref$mapto.scores <- 0
+  ref$mapto.scores[which(ref$split == 2)] <- ref.list[[2]]$predicted.id.score
   
-  return(query)
+  ref@misc$CellTools$opti_k <- opti_k
+  ref@misc$CellTools$optimize_k <- optimize_k
+  ref@misc$CellTools$optimized_k <- optimized_k
+  
+  return(ref)
 }
