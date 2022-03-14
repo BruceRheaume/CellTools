@@ -18,7 +18,8 @@ Global correlation analyses of the clusters provided in lab parameter
 This function examines the global transcriptomic properties of single cell data.
 }
 \references{
-Rheaume, B. A., & Trakhtenberg, E. F. (2021). Self-learning optimization algorithm for integration
-of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types.
+Rheaume, B. A., & Trakhtenberg, E. F. (2022). Self-learning algorithm for denoising
+and advancing the integration of scRNA-seq datasets improves the identification of resilient
+and susceptible retinal ganglion cell types
 \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 }
