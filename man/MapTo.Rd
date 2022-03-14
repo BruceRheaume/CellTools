@@ -2,33 +2,40 @@
 % Please edit documentation in R/MapTo.R
 \name{MapTo}
 \alias{MapTo}
-\title{Optimization of K-Nearest Neighbors for Tracing of Query to Reference Data}
+\title{Map query Seurat object to reference Seurat object}
 \usage{
-MapTo(ref, query, lab, range = c(10, 100), ref.dims = 30, query.dims = 30)
+MapTo(
+  ref,
+  query,
+  lab = "seurat_clusters",
+  k = "opti",
+  get.anchors = T,
+  dims = 30
+)
 }
 \arguments{
 \item{ref}{Reference Seurat object}
 
-\item{query}{Query Seurat object}
+\item{query}{Wuery Seurat object}
 
-\item{lab}{The reference @meta.data slot to transfer to query object}
+\item{lab}{The reference label to treat as clusters. Default is "seurat_clusters"}
 
-\item{range}{The range of k-weight parameters to loop through; default: 10-100}
+\item{k}{The k-weight to use when weighting anchors. Default is opti}
 
-\item{ref.dims}{The number of PCs to use when creating the reference UMAP and discovering anchors.}
+\item{get.anchors}{A logical that when true will first run Seurat's FindTransferAnchors. Default is TRUE.}
 
-\item{query.dims}{The number of PCs to use when creating the query UMAP}
+\item{dims}{Number of PCs to use when get.anchors = T. Default is 30}
 }
 \value{
-A Seurat object containing the transferred data labels stored in "predicted.ids," the
-confidence scores saved in predicted.id.score, and the reference umap of the query object.
+Returns a Seurat object with a new slot where the k-weight is stored: misc$CellTools$opti_k
 }
 \description{
-This function takes query and reference Seurat objects as input, identifies the optimal k-weight-parameter,
-and outputs the query object with updated metadata and miscellaneous slots, based on arguments; see below.
+This function is a wrapper for Seurat's TransferData, IntegrateEmbeddings, and ProjectUMAP functions, meant to be run after
+OptiK, as part of the Denoise/OptiK/MapTo pipeline.
 }
 \references{
-Rheaume, B. A., & Trakhtenberg, E. F. (2021). Self-learning optimization algorithm for integration
-of scRNA-seq datasets improves the identification of resilient and susceptible retinal ganglion cell types.
+Rheaume, B. A., & Trakhtenberg, E. F. (2022). Self-learning algorithm for denoising
+and advancing the integration of scRNA-seq datasets improves the identification of resilient
+and susceptible retinal ganglion cell types
 \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 }
