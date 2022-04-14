@@ -16,7 +16,7 @@
 #' and susceptible retinal ganglion cell types 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 #' @export 
-OptiK <- function(data, lab = "seurat_clusters", range = c(10,100), dims = 30, perc = 20, num = NA, seed = 1984){
+OptiK <- function(data, lab = "seurat_clusters", range = c(10,100), dims = 30, perc = .20, num = NA, seed = 1984, n = 30){
   data@misc$CellTools <- list() 
   
   if(perc == F){
@@ -50,7 +50,7 @@ OptiK <- function(data, lab = "seurat_clusters", range = c(10,100), dims = 30, p
                        width = 100,   
                        char = "=")
   for(k in range[1]:range[2]){ 
-    data.list[[2]] <- MapTo(ref = data.list[[1]], query = data.list[[2]], lab = data.list[[1]][[lab]][,1], k = k, get.anchors = F, dims = NA)
+    data.list[[2]] <- MapTo(ref = data.list[[1]], query = data.list[[2]], lab = data.list[[1]][[lab]][,1], k = k, get.anchors = F, dims = NA, anchors = anchors, nfeatures = 2000, neighbors = n)
     optimize_new <- data.frame(k = k, correct = length(which(data.list[[2]]$predicted.id == data.list[[2]][[lab]][,1]))/ncol(data.list[[2]]))
     optimize_k <- rbind(optimize_new, optimize_k)
     setTxtProgressBar(pb, k)

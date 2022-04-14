@@ -16,14 +16,14 @@
 #' and susceptible retinal ganglion cell types 
 #' \href{https://www.biorxiv.org/content/10.1101/2021.10.15.464552v2.abstract}{bioRxiv}.
 #' @export 
-MapTo <- function(ref, query, lab = "seurat_clusters", k = "opti", get.anchors = T, dims = 30){
+MapTo <- function(ref, query, lab = "seurat_clusters", k = "opti", get.anchors = T, dims = 20, anchors = NA, neighbors = 30, nfeatures = 2000){  
   
   if(k == "opti"){
     k <- ref@misc$CellTools$opti_k
   } else {k <- k}
   
   if(get.anchors == T){
-    features <- Seurat::SelectIntegrationFeatures(object.list = list(ref,query), nfeatures = 2000)
+    features <- Seurat::SelectIntegrationFeatures(object.list = list(ref,query), nfeatures = nfeatures)
     anchors <- Seurat::FindTransferAnchors(
       reference = ref,
       query = query,
@@ -33,7 +33,7 @@ MapTo <- function(ref, query, lab = "seurat_clusters", k = "opti", get.anchors =
       reduction = "pcaproject",
       dims = 1:dims
   )
-  }
+  } else {anchors <- anchors}
   dat <- Seurat::TransferData(
     anchorset = anchors,
     reference = ref,
@@ -47,20 +47,21 @@ MapTo <- function(ref, query, lab = "seurat_clusters", k = "opti", get.anchors =
     anchorset = anchors,
     reference = ref,
     query = dat, 
-    new.reduction.name = "refpca_",
+    new.reduction.name = "refpca",
     reductions = "pcaproject",
     k.weight = k,
     verbose = F
   )
   dat <- Seurat::ProjectUMAP(
     query = dat, 
-    query.reduction = "refpca_", 
+    query.reduction = "refpca", 
     reference = ref, 
     reference.reduction = "pca", 
     reduction.model = "umap",
     #k.weight = k,
-    n.trees = n,
-    verbose = F
+    #n.trees = n,
+    verbose = F,
+    k.param = neighbors
   )
   return(dat)
 }
